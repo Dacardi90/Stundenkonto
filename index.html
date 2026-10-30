@@ -1,0 +1,432 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Stundenkonto</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Stunden">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#eef1f4" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0f141a" media="(prefers-color-scheme: dark)">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" type="image/png" href="icon-180.png">
+<style>
+:root{
+  --bg:#eef1f4; --surface:#ffffff; --fg:#17202a; --muted:#5d6b78; --line:#d5dbe1;
+  --accent:#1f5fa8; --accent-fg:#ffffff; --plus:#1d7a46; --minus:#b3261e; --chip:#e3e8ee; --warn:#8a5a00;
+  --sans:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,sans-serif;
+  --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root{
+  --bg:#0f141a; --surface:#18202a; --fg:#e7ecf1; --muted:#93a1ae; --line:#2a3542;
+  --accent:#5b9be0; --accent-fg:#0b1118; --plus:#4cc283; --minus:#ff7a70; --chip:#232d39; --warn:#e0b25b; color-scheme:dark}}
+*{box-sizing:border-box}
+html,body{background:var(--bg);margin:0}
+body{color:var(--fg);font-family:var(--sans);font-size:16px;line-height:1.45;-webkit-text-size-adjust:100%;
+  padding-top:max(16px,env(safe-area-inset-top));padding-bottom:max(40px,env(safe-area-inset-bottom));
+  padding-left:max(16px,env(safe-area-inset-left));padding-right:max(16px,env(safe-area-inset-right))}
+.wrap{max-width:480px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+.num{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.lbl{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:500}
+.top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.saldo{padding:12px 4px 4px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.saldo .big{font-size:56px;font-weight:600;line-height:1.05;letter-spacing:-.02em}
+.saldo .sub{color:var(--muted);font-size:14px}
+.sync{margin-top:14px;display:flex;align-items:center;gap:6px;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:6px 11px;font-size:13px;color:var(--muted);cursor:pointer;white-space:nowrap}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--muted)}
+.dot.ok{background:var(--plus)} .dot.warn{background:var(--warn)} .dot.busy{background:var(--accent)}
+.pos{color:var(--plus)} .neg{color:var(--minus)}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:14px}
+.row{display:flex;gap:10px;align-items:center}
+.row>*{min-width:0}
+input,button{font:inherit;color:inherit}
+input[type=date],input[type=text]{width:100%;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:11px 12px;font-size:17px;-webkit-appearance:none;appearance:none;min-height:46px}
+input:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.dayname{color:var(--muted);font-size:14px;white-space:nowrap}
+.stepper{display:grid;grid-template-columns:56px 1fr 56px;gap:8px}
+.stepper button{background:var(--chip);border:0;border-radius:10px;font-size:26px;font-weight:500;cursor:pointer}
+.stepper input{text-align:center;font-family:var(--mono);font-size:30px;font-weight:600;padding:8px 4px}
+.diffline{text-align:center;font-size:14px;color:var(--muted);margin-top:8px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{background:var(--chip);border:1px solid transparent;border-radius:999px;padding:8px 13px;font-size:14px;cursor:pointer}
+.chip.on{border-color:var(--accent);color:var(--accent);font-weight:600}
+.btn{background:var(--accent);color:var(--accent-fg);border:0;border-radius:12px;padding:15px;font-size:17px;font-weight:600;cursor:pointer}
+.btn.sec{background:var(--chip);color:var(--fg);font-weight:500;padding:12px}
+.btn:disabled{opacity:.5}
+.status{font-size:14px;color:var(--muted);min-height:1.2em;text-align:center}
+.list{display:flex;flex-direction:column}
+.item{display:grid;grid-template-columns:1fr auto auto;gap:12px;align-items:center;padding:11px 2px;border:0;border-top:1px solid var(--line);cursor:pointer;background:none;text-align:left;width:100%}
+.item:first-child{border-top:0}
+.item>span{min-width:0}
+.item .d{font-weight:500;display:block}
+.item .n{display:block;color:var(--muted);font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.item .h{color:var(--muted)}
+.item .x{font-weight:600;min-width:64px;text-align:right}
+.empty{color:var(--muted);font-size:14px;padding:6px 2px}
+.week{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;font-size:14px;color:var(--muted)}
+details summary{cursor:pointer;color:var(--muted);font-size:14px;padding:4px 0}
+details .card{margin-top:10px}
+.link{background:none;border:0;color:var(--minus);font-size:14px;cursor:pointer;padding:4px 0}
+.hint{font-size:13px;color:var(--muted)}
+.mono-box{font-family:var(--mono);font-size:13px;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 10px;word-break:break-all;-webkit-user-select:all;user-select:all}
+.banner{background:var(--surface);border:1px solid var(--warn);border-radius:12px;padding:12px 14px;display:flex;gap:10px;align-items:center;justify-content:space-between;font-size:14px}
+.banner .btn{padding:9px 13px;font-size:15px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <section class="saldo" aria-live="polite">
+      <span class="lbl">Überstundenstand</span>
+      <span id="saldo" class="big num">±0:00</span>
+      <span id="saldoSub" class="sub"></span>
+    </section>
+    <button id="syncPill" class="sync" type="button" aria-label="Jetzt mit OneDrive abgleichen"><span id="syncDot" class="dot"></span><span id="syncTxt">Lokal</span></button>
+  </div>
+
+  <div id="loginBanner" class="banner" hidden>
+    <span id="loginBannerTxt">Für den OneDrive-Abgleich kurz anmelden.</span>
+    <button id="loginBannerBtn" class="btn" type="button">Anmelden</button>
+  </div>
+
+  <section class="card" aria-label="Tag eintragen">
+    <div class="row">
+      <input id="date" type="date" aria-label="Datum">
+      <span id="dayname" class="dayname"></span>
+    </div>
+    <div>
+      <div class="lbl" style="margin-bottom:8px">Gearbeitete Stunden</div>
+      <div class="stepper">
+        <button id="minus" type="button" aria-label="Eine halbe Stunde weniger">−</button>
+        <input id="hours" type="text" inputmode="decimal" value="8:00" aria-label="Stunden (z. B. 7:30 oder 7,5)">
+        <button id="plus" type="button" aria-label="Eine halbe Stunde mehr">+</button>
+      </div>
+      <div id="diffline" class="diffline"></div>
+    </div>
+    <div class="chips" role="group" aria-label="Schnellauswahl">
+      <button class="chip" type="button" data-kind="work" data-h="8">8 h normal</button>
+      <button class="chip" type="button" data-kind="flex" data-h="0">Freizeitausgleich</button>
+      <button class="chip" type="button" data-kind="off" data-h="0">Urlaub / Krank / Feiertag</button>
+    </div>
+    <input id="note" type="text" placeholder="Notiz (optional)" aria-label="Notiz">
+    <button id="save" class="btn" type="button">Speichern</button>
+    <button id="delBtn" class="link" type="button" hidden>Eintrag für diesen Tag löschen</button>
+    <div id="status" class="status"></div>
+  </section>
+
+  <section class="card" aria-label="Verlauf">
+    <div class="week"><span class="lbl">Letzte Einträge</span><span id="weekSum" class="num"></span></div>
+    <div id="list" class="list"></div>
+  </section>
+
+  <details id="settings">
+    <summary>Einstellungen</summary>
+    <div class="card">
+      <div class="lbl">OneDrive</div>
+      <label class="hint" for="clientId">Anwendungs-ID (Client-ID) aus dem Azure-Portal</label>
+      <input id="clientId" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="z. B. 1a2b3c4d-…">
+      <span class="hint">Umleitungs-URI, die du im Azure-Portal einträgst:</span>
+      <div id="redirectUri" class="mono-box"></div>
+      <div class="row">
+        <button id="loginBtn" class="btn" type="button" style="flex:1">Bei Microsoft anmelden</button>
+        <button id="logoutBtn" class="btn sec" type="button" hidden>Abmelden</button>
+      </div>
+      <span id="accountInfo" class="hint"></span>
+      <span class="hint">Die Daten liegen in deinem OneDrive unter <b>Apps › Stundenkonto › stundenkonto.json</b>.</span>
+    </div>
+    <div class="card" style="margin-top:12px">
+      <label class="lbl" for="start">Übertrag / Startwert in Stunden</label>
+      <input id="start" type="text" inputmode="decimal" value="0:00">
+      <span class="hint">Dein Überstundenstand vor dem ersten Eintrag, z. B. 12:30 oder −4.</span>
+      <button id="saveStart" class="btn sec" type="button">Startwert speichern</button>
+    </div>
+  </details>
+</div>
+
+<script>
+"use strict";
+/* ================= Grundwerte ================= */
+const SOLL = 8;                       // Sollstunden Mo–Fr
+const FILE = "stundenkonto.json";     // Datei im OneDrive-App-Ordner
+const SCOPES = "Files.ReadWrite.AppFolder offline_access openid profile";
+const AUTH = "https://login.microsoftonline.com/common/oauth2/v2.0";
+const GRAPH = "https://graph.microsoft.com/v1.0/me/drive/special/approot:/" + FILE;
+const K = {data:"sk.data", cid:"sk.clientId", tok:"sk.tokens", pkce:"sk.pkce", acct:"sk.account", was:"sk.wasLoggedIn"};
+const WD = ["So","Mo","Di","Mi","Do","Fr","Sa"];
+const $ = id => document.getElementById(id);
+
+const ls = {
+  get(k,def){try{const v=localStorage.getItem(k);return v==null?def:JSON.parse(v)}catch(e){return def}},
+  set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}},
+  del(k){try{localStorage.removeItem(k)}catch(e){}}
+};
+
+/* ================= Daten ================= */
+// data = { entries: { "YYYY-MM-DD": {hours, kind, note, ts} | {deleted:true, ts} }, start:{value, ts} }
+let data = ls.get(K.data, {entries:{}, start:{value:0, ts:0}});
+let kind = "work";
+function persist(){ ls.set(K.data, data); }
+function live(){ const o={}; for(const k in data.entries){ if(!data.entries[k].deleted) o[k]=data.entries[k]; } return o; }
+
+function mergeData(a,b){
+  const out={entries:{}, start:(a.start?.ts||0)>=(b.start?.ts||0)?a.start:b.start};
+  const keys=new Set([...Object.keys(a.entries||{}),...Object.keys(b.entries||{})]);
+  keys.forEach(k=>{ const x=a.entries?.[k], y=b.entries?.[k];
+    out.entries[k] = !x ? y : !y ? x : ((x.ts||0)>=(y.ts||0) ? x : y); });
+  return out;
+}
+
+/* ================= Hilfen ================= */
+function iso(d){return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
+function parseDate(s){const [y,m,d]=s.split("-").map(Number);return new Date(y,m-1,d)}
+function soll(s){const w=parseDate(s).getDay();return (w>=1&&w<=5)?SOLL:0}
+function parseH(t){
+  t=String(t).trim().replace("−","-").replace(/\s*h$/i,"");
+  if(!t) return NaN;
+  let sign=1; if(t[0]==="-"){sign=-1;t=t.slice(1)} else if(t[0]==="+"){t=t.slice(1)}
+  if(t.includes(":")){const [h,m]=t.split(":");if(!/^\d*$/.test(h)||!/^\d*$/.test(m))return NaN;return sign*((+h||0)+(+m||0)/60)}
+  const v=parseFloat(t.replace(",","."));return /^[\d.,]+$/.test(t)?sign*v:NaN;
+}
+function fmt(h,signed){
+  const a=Math.round(Math.abs(h)*60);
+  const s=a===0?(signed?"±":""):h<0?"−":(signed?"+":"");
+  return s+Math.floor(a/60)+":"+String(a%60).padStart(2,"0");
+}
+function diffOf(s,e){return e.kind==="off"?0:e.hours-soll(s)}
+function cls(v){return v>0.001?"pos":v<-0.001?"neg":""}
+function longDate(s){const d=parseDate(s);return WD[d.getDay()]+", "+d.getDate()+"."+(d.getMonth()+1)+"."+String(d.getFullYear()).slice(2)}
+
+/* ================= Anzeige ================= */
+function render(){
+  const E=live(), keys=Object.keys(E).sort(), startH=+data.start?.value||0;
+  let total=startH; keys.forEach(k=>total+=diffOf(k,E[k]));
+  const el=$("saldo"); el.textContent=fmt(total,true)+" h"; el.className="big num "+cls(total);
+  $("saldoSub").textContent = keys.length
+    ? keys.length+" Tage erfasst"+(startH?" · Startwert "+fmt(startH,true):"")
+    : "Noch keine Einträge – trag deinen ersten Tag ein.";
+
+  const now=new Date(); const mo=new Date(now); mo.setDate(now.getDate()-((now.getDay()+6)%7));
+  const moS=iso(mo); let wk=0, wh=0;
+  keys.filter(k=>k>=moS).forEach(k=>{wk+=diffOf(k,E[k]);wh+=E[k].kind==="off"?0:E[k].hours});
+  $("weekSum").textContent="Diese Woche: "+fmt(wh)+" h ("+fmt(wk,true)+")";
+
+  const list=$("list"); list.textContent="";
+  const recent=keys.slice().reverse().slice(0,40);
+  if(!recent.length){const p=document.createElement("div");p.className="empty";p.textContent="Hier erscheinen deine Tage mit Plus und Minus.";list.append(p)}
+  recent.forEach(k=>{
+    const e=E[k], d=diffOf(k,e);
+    const b=document.createElement("button"); b.type="button"; b.className="item";
+    const left=document.createElement("span");
+    const dd=document.createElement("span"); dd.className="d"; dd.textContent=longDate(k);
+    const sub=document.createElement("span"); sub.className="n";
+    sub.textContent=[e.kind==="off"?"Urlaub/Krank/Feiertag":e.kind==="flex"?"Freizeitausgleich":"",e.note||""].filter(Boolean).join(" · ");
+    left.append(dd,sub);
+    const h=document.createElement("span"); h.className="h num"; h.textContent=e.kind==="off"?"–":fmt(e.hours)+" h";
+    const x=document.createElement("span"); x.className="x num "+cls(d); x.textContent=fmt(d,true);
+    b.append(left,h,x);
+    b.addEventListener("click",()=>{ $("date").value=k; loadDay(); window.scrollTo({top:0,behavior:"smooth"}); });
+    list.append(b);
+  });
+  if(document.activeElement!==$("start")) $("start").value=fmt(startH,true).replace("±","");
+  updateDiff();
+}
+
+function updateDiff(){
+  const s=$("date").value; if(!s) return;
+  const d=parseDate(s); $("dayname").textContent=WD[d.getDay()]+" · Soll "+soll(s)+" h";
+  const h=parseH($("hours").value);
+  let txt, c="";
+  if(kind==="off") txt="Zählt wie ein normaler Tag (±0)";
+  else if(!isNaN(h)){const v=h-soll(s);txt="Für diesen Tag: "+fmt(v,true)+" h";c=cls(v)}
+  else txt="Bitte Stunden eingeben, z. B. 7:30";
+  $("diffline").textContent=txt; $("diffline").className="diffline "+c;
+  document.querySelectorAll(".chip").forEach(ch=>ch.classList.toggle("on",ch.dataset.kind===kind));
+  const has=!!live()[s];
+  $("save").textContent=has?"Eintrag ändern":"Speichern";
+  $("delBtn").hidden=!has;
+}
+
+function loadDay(){
+  const s=$("date").value, e=live()[s];
+  if(e){kind=e.kind||"work";$("hours").value=fmt(e.hours);$("note").value=e.note||""}
+  else{kind="work";$("hours").value=fmt(soll(s)||0);$("note").value=""}
+  $("status").textContent=""; updateDiff();
+}
+
+/* ================= Eintragen ================= */
+function saveDay(){
+  const s=$("date").value; let h=parseH($("hours").value);
+  if(kind==="off") h=0;
+  if(!s||isNaN(h)||h<0||h>24){$("status").textContent="Bitte gültige Stunden zwischen 0 und 24 eingeben.";return}
+  const e={hours:Math.round(h*100)/100,kind,note:$("note").value.trim().slice(0,120),ts:Date.now()};
+  data.entries[s]=e; persist(); render();
+  $("status").textContent="Gespeichert: "+longDate(s)+" "+fmt(diffOf(s,e),true)+" h";
+  scheduleSync();
+}
+function deleteDay(){
+  const s=$("date").value;
+  data.entries[s]={deleted:true,ts:Date.now()}; persist();
+  loadDay(); render(); $("status").textContent="Eintrag gelöscht.";
+  scheduleSync();
+}
+
+$("minus").addEventListener("click",()=>{let h=parseH($("hours").value);if(isNaN(h))h=0;if(kind==="off")kind="work";$("hours").value=fmt(Math.max(0,h-0.5));updateDiff()});
+$("plus").addEventListener("click",()=>{let h=parseH($("hours").value);if(isNaN(h))h=0;if(kind==="off")kind="work";$("hours").value=fmt(Math.min(24,h+0.5));updateDiff()});
+$("hours").addEventListener("input",()=>{if(kind!=="work"&&parseH($("hours").value)>0)kind="work";updateDiff()});
+$("date").addEventListener("change",loadDay);
+document.querySelectorAll(".chip").forEach(c=>c.addEventListener("click",()=>{kind=c.dataset.kind;$("hours").value=fmt(+c.dataset.h);updateDiff()}));
+$("save").addEventListener("click",saveDay);
+$("delBtn").addEventListener("click",deleteDay);
+$("saveStart").addEventListener("click",()=>{
+  const v=parseH($("start").value); if(isNaN(v)){$("start").focus();return}
+  data.start={value:Math.round(v*100)/100,ts:Date.now()}; persist(); render();
+  $("saveStart").textContent="Gespeichert"; setTimeout(()=>$("saveStart").textContent="Startwert speichern",1800);
+  scheduleSync();
+});
+
+/* ================= Microsoft-Anmeldung (OAuth 2.0 + PKCE) ================= */
+const REDIRECT = location.origin + location.pathname.replace(/index\.html$/,"");
+function clientId(){ return (ls.get(K.cid,"")||"").trim(); }
+function b64url(buf){ return btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,""); }
+function rnd(n){ const a=new Uint8Array(n); crypto.getRandomValues(a); return b64url(a); }
+
+async function startLogin(silent){
+  const cid=clientId(); if(!cid){ $("settings").open=true; $("clientId").focus(); setSync("warn","Client-ID fehlt"); return; }
+  const verifier=rnd(48), state=rnd(16);
+  const challenge=b64url(await crypto.subtle.digest("SHA-256",new TextEncoder().encode(verifier)));
+  ls.set(K.pkce,{verifier,state,silent:!!silent,t:Date.now()});
+  const acct=ls.get(K.acct,null);
+  const p=new URLSearchParams({client_id:cid,response_type:"code",redirect_uri:REDIRECT,response_mode:"query",
+    scope:SCOPES,state,code_challenge:challenge,code_challenge_method:"S256"});
+  if(silent) p.set("prompt","none");
+  if(acct?.username) p.set("login_hint",acct.username);
+  location.assign(AUTH+"/authorize?"+p.toString());
+}
+
+async function tokenRequest(params){
+  const body=new URLSearchParams({client_id:clientId(),scope:SCOPES,...params});
+  const r=await fetch(AUTH+"/token",{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body});
+  const j=await r.json().catch(()=>({}));
+  if(!r.ok) throw Object.assign(new Error(j.error_description||"token"),{code:j.error||"token_error"});
+  const t={access:j.access_token,refresh:j.refresh_token||ls.get(K.tok,{}).refresh,exp:Date.now()+(j.expires_in||3600)*1000};
+  ls.set(K.tok,t);
+  if(j.id_token){ try{ const c=JSON.parse(decodeURIComponent(escape(atob(j.id_token.split(".")[1].replace(/-/g,"+").replace(/_/g,"/")))));
+    ls.set(K.acct,{username:c.preferred_username||c.email||"",name:c.name||""}); }catch(e){} }
+  ls.set(K.was,true);
+  return t;
+}
+
+async function handleRedirect(){
+  const q=new URLSearchParams(location.search);
+  if(!q.has("code")&&!q.has("error")) return;
+  const pk=ls.get(K.pkce,null); ls.del(K.pkce);
+  history.replaceState(null,"",REDIRECT);
+  if(q.has("error")){
+    const err=q.get("error");
+    if(pk?.silent) showLoginBanner("Für den OneDrive-Abgleich kurz anmelden.");
+    else setSync("warn", err==="access_denied"?"Anmeldung abgebrochen":"Anmeldung fehlgeschlagen");
+    return;
+  }
+  if(!pk||q.get("state")!==pk.state){ setSync("warn","Anmeldung ungültig – bitte erneut"); return; }
+  try{ await tokenRequest({grant_type:"authorization_code",code:q.get("code"),redirect_uri:REDIRECT,code_verifier:pk.verifier}); }
+  catch(e){ setSync("warn","Anmeldung fehlgeschlagen"); $("accountInfo").textContent="Fehler: "+e.message; }
+}
+
+async function getToken(){
+  const t=ls.get(K.tok,null);
+  if(!t) return null;
+  if(t.access&&t.exp>Date.now()+60000) return t.access;
+  if(!t.refresh) return null;
+  try{ return (await tokenRequest({grant_type:"refresh_token",refresh_token:t.refresh})).access; }
+  catch(e){ ls.set(K.tok,{}); return null; }
+}
+
+function logout(){ ls.del(K.tok); ls.del(K.acct); ls.del(K.was); updateAccountUi(); setSync("","Lokal"); }
+
+/* ================= OneDrive-Abgleich ================= */
+let syncing=false, syncAgain=false, syncTimer=null;
+function scheduleSync(){ clearTimeout(syncTimer); syncTimer=setTimeout(()=>sync(false),1200); }
+
+async function gfetch(url,opt,token){
+  const r=await fetch(url,{...opt,headers:{...(opt?.headers||{}),Authorization:"Bearer "+token}});
+  return r;
+}
+
+async function sync(allowRedirect){
+  if(!clientId()||!ls.get(K.was,false)){ setSync("","Lokal"); return; }
+  if(!navigator.onLine){ setSync("warn","Offline – lokal gespeichert"); return; }
+  if(syncing){ syncAgain=true; return; }
+  syncing=true; setSync("busy","Gleiche ab …");
+  try{
+    const token=await getToken();
+    if(!token){
+      if(allowRedirect && !sessionStorage.getItem("sk.silentTried")){
+        sessionStorage.setItem("sk.silentTried","1"); syncing=false; return startLogin(true);
+      }
+      showLoginBanner("Anmeldung abgelaufen – kurz neu anmelden, um abzugleichen.");
+      setSync("warn","Nicht abgeglichen"); return;
+    }
+    hideLoginBanner();
+    // 1) OneDrive-Stand holen
+    let remote={entries:{},start:{value:0,ts:0}};
+    const meta=await gfetch(GRAPH,{},token);
+    if(meta.ok){
+      const m=await meta.json();
+      const url=m["@microsoft.graph.downloadUrl"];
+      const dl=url?await fetch(url):await gfetch(GRAPH+":/content",{},token);
+      if(dl.ok){ const j=await dl.json().catch(()=>null); if(j&&j.entries) remote=j; }
+    } else if(meta.status!==404){ throw new Error("Lesen fehlgeschlagen ("+meta.status+")"); }
+    // 2) zusammenführen
+    const merged=mergeData(data,remote);
+    const changedLocal=JSON.stringify(merged)!==JSON.stringify(data);
+    const changedRemote=JSON.stringify(merged.entries)!==JSON.stringify(remote.entries)||JSON.stringify(merged.start)!==JSON.stringify(remote.start);
+    data=merged; persist(); if(changedLocal){ render(); }
+    // 3) zurückschreiben
+    if(changedRemote){
+      const put=await gfetch(GRAPH+":/content",{method:"PUT",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({app:"Stundenkonto",version:1,savedAt:new Date().toISOString(),start:data.start,entries:data.entries})},token);
+      if(!put.ok) throw new Error("Schreiben fehlgeschlagen ("+put.status+")");
+    }
+    const t=new Date(); setSync("ok","OneDrive "+String(t.getHours()).padStart(2,"0")+":"+String(t.getMinutes()).padStart(2,"0"));
+  }catch(e){
+    setSync("warn","Abgleich fehlgeschlagen");
+    $("accountInfo").textContent="Letzter Fehler: "+(e.message||e);
+  }finally{
+    syncing=false;
+    if(syncAgain){ syncAgain=false; scheduleSync(); }
+  }
+}
+
+function setSync(state,txt){ $("syncDot").className="dot "+(state||""); $("syncTxt").textContent=txt; }
+function showLoginBanner(t){ $("loginBannerTxt").textContent=t; $("loginBanner").hidden=false; }
+function hideLoginBanner(){ $("loginBanner").hidden=true; }
+function updateAccountUi(){
+  const a=ls.get(K.acct,null), was=ls.get(K.was,false);
+  $("accountInfo").textContent = was&&a ? "Angemeldet als "+(a.username||a.name) : was ? "Angemeldet" : "Nicht angemeldet – Einträge bleiben nur auf diesem Gerät.";
+  $("logoutBtn").hidden=!was;
+  $("loginBtn").textContent=was?"Neu anmelden":"Bei Microsoft anmelden";
+}
+
+$("clientId").value=clientId();
+$("clientId").addEventListener("change",()=>{ ls.set(K.cid,$("clientId").value.trim()); });
+$("redirectUri").textContent=REDIRECT;
+$("loginBtn").addEventListener("click",()=>{ ls.set(K.cid,$("clientId").value.trim()); startLogin(false); });
+$("loginBannerBtn").addEventListener("click",()=>startLogin(false));
+$("logoutBtn").addEventListener("click",logout);
+$("syncPill").addEventListener("click",()=>{ if(!clientId()||!ls.get(K.was,false)){ $("settings").open=true; $("settings").scrollIntoView({behavior:"smooth"}); } else sync(false); });
+window.addEventListener("online",()=>sync(false));
+document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible") sync(false); });
+
+/* ================= Start ================= */
+$("date").value=iso(new Date()); loadDay(); render(); updateAccountUi();
+setSync("", ls.get(K.was,false)?"…":"Lokal");
+(async()=>{ await handleRedirect(); updateAccountUi(); sync(true); })();
+
+if("serviceWorker" in navigator && location.protocol==="https:"){ navigator.serviceWorker.register("sw.js").catch(()=>{}); }
+</script>
+</body>
+</html>
