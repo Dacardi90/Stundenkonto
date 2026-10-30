@@ -154,7 +154,7 @@ const SOLL = 8;                       // Sollstunden Mo–Fr
 const FILE = "stundenkonto.json";     // Datei im OneDrive-App-Ordner
 const SCOPES = "Files.ReadWrite.AppFolder offline_access openid profile";
 const AUTH = "https://login.microsoftonline.com/common/oauth2/v2.0";
-const GRAPH = "https://graph.microsoft.com/v1.0/me/drive/special/approot:/" + FILE;
+const GRAPH_ROOT = "https://graph.microsoft.com/v1.0/me/drive";
 const K = {data:"sk.data", cid:"sk.clientId", tok:"sk.tokens", pkce:"sk.pkce", acct:"sk.account", was:"sk.wasLoggedIn"};
 const WD = ["So","Mo","Di","Mi","Do","Fr","Sa"];
 const $ = id => document.getElementById(id);
@@ -371,13 +371,18 @@ async function sync(allowRedirect){
       setSync("warn","Nicht abgeglichen"); return;
     }
     hideLoginBanner();
+    // 0) App-Ordner abfragen – legt ihn beim ersten Mal in OneDrive an
+    const root=await gfetch(GRAPH_ROOT+"/special/approot",{},token);
+    if(!root.ok) throw new Error("App-Ordner nicht erreichbar ("+root.status+")");
+    const rootId=(await root.json()).id;
+    const FILEURL=GRAPH_ROOT+"/items/"+encodeURIComponent(rootId)+":/"+FILE+":";
     // 1) OneDrive-Stand holen
     let remote={entries:{},start:{value:0,ts:0}};
-    const meta=await gfetch(GRAPH,{},token);
+    const meta=await gfetch(FILEURL,{},token);
     if(meta.ok){
       const m=await meta.json();
       const url=m["@microsoft.graph.downloadUrl"];
-      const dl=url?await fetch(url):await gfetch(GRAPH+":/content",{},token);
+      const dl=url?await fetch(url):await gfetch(FILEURL+"/content",{},token);
       if(dl.ok){ const j=await dl.json().catch(()=>null); if(j&&j.entries) remote=j; }
     } else if(meta.status!==404){ throw new Error("Lesen fehlgeschlagen ("+meta.status+")"); }
     // 2) zusammenführen
@@ -387,7 +392,7 @@ async function sync(allowRedirect){
     data=merged; persist(); if(changedLocal){ render(); }
     // 3) zurückschreiben
     if(changedRemote){
-      const put=await gfetch(GRAPH+":/content",{method:"PUT",headers:{"Content-Type":"application/json"},
+      const put=await gfetch(FILEURL+"/content",{method:"PUT",headers:{"Content-Type":"application/json"},
         body:JSON.stringify({app:"Stundenkonto",version:1,savedAt:new Date().toISOString(),start:data.start,entries:data.entries})},token);
       if(!put.ok) throw new Error("Schreiben fehlgeschlagen ("+put.status+")");
     }

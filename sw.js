@@ -1,5 +1,5 @@
 // Hält die App offline verfügbar. Bei Änderungen an der App die Versionsnummer erhöhen.
-const CACHE = "stundenkonto-v1";
+const CACHE = "stundenkonto-v2";
 const FILES = ["./", "./index.html", "./manifest.webmanifest", "./icon-180.png", "./icon-512.png"];
 
 self.addEventListener("install", e => {
